@@ -25,7 +25,9 @@ source-repository head
 
 library
   exposed-modules:
+      HMagma.AST
       HMagma.Lexer
+      HMagma.Parser
       HMagma.Tokens
   other-modules:
       Paths_hmagma
@@ -38,6 +40,7 @@ library
       base >=4.7 && <5
     , containers
     , megaparsec
+    , parser-combinators
     , text
     , void
   default-language: Haskell2010
@@ -56,6 +59,7 @@ executable hmagma-exe
     , containers
     , hmagma
     , megaparsec
+    , parser-combinators
     , text
     , void
   default-language: Haskell2010
@@ -75,6 +79,7 @@ test-suite hmagma-test
     , containers
     , hmagma
     , megaparsec
+    , parser-combinators
     , text
     , void
   default-language: Haskell2010

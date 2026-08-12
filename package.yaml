@@ -18,6 +18,7 @@ dependencies:
 - text
 - void
 - containers
+- parser-combinators
 
 ghc-options:
 - -Wall
