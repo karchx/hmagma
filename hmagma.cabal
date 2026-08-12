@@ -26,6 +26,7 @@ source-repository head
 library
   exposed-modules:
       HMagma.AST
+      HMagma.Environment
       HMagma.Lexer
       HMagma.Parser
       HMagma.Tokens
