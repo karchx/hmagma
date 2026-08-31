@@ -1,2 +1,17 @@
 
-let x = nothing;
+/*
+// Esto es equivalente a = [7000, 0, 0] km (r)
+let p1 = Vec3(7000, 0, 0); 
+// Esto es equivalente a = [0, 7.5, 0] km/s (v)
+let p2 = Vec3(0, 7.5, 0);
+
+// <.> = es explicito a calcular un dot product
+// esto deberia manejarse: 
+// r.v = (r_x*v_x) + (r_y*v_y) + (r_z*v_z)
+// r.v = (7000 * 0) + (0 * 7.5) + (0 * 0) = 0
+p1 <.> p2;
+*/
+let x = 1;
+let y = x + 3;
+let z = z + 4;
+y + 3 + z;

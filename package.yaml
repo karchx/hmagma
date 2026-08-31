@@ -19,6 +19,7 @@ dependencies:
 - void
 - containers
 - parser-combinators
+- mtl
 
 ghc-options:
 - -Wall

@@ -25,12 +25,13 @@ data UnaryOp = OpNeg | OpNot deriving (Show, Eq, Generic)
 data Expr
     = ELiteral  !SourcePos !Literal
     | EVar      !SourcePos !Text
+    | EAssign   !SourcePos !Text !Expr
     | EUnary    !SourcePos !UnaryOp !Expr
     | EBinary   !SourcePos !BinaryOp !Expr !Expr
-    | EIf       !SourcePos !Expr !Expr !Expr 
-    | EBlock    !SourcePos ![Stmt] !(Maybe Expr)
+    | EIf       !SourcePos !Expr !Expr !Expr
     | ELet      !SourcePos !Text !Expr !Expr
     | EApp      !SourcePos !Expr ![Expr]
+    | EBlock    !SourcePos ![Stmt] !(Maybe Expr)
     | ELambda   !SourcePos ![Text] !Expr
     | ESExpr    !SourcePos !Text ![Expr]
     deriving (Show, Eq, Generic)
