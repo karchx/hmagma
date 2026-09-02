@@ -1,6 +1,9 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-module HMagma.IR (genProgramIR) where
+module HMagma.IR 
+    ( genProgramIR
+    , TAC(..)
+    ) where
 
 import Control.Monad.State
 import Data.Text (Text)
