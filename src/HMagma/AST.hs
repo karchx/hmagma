@@ -18,7 +18,7 @@ data BinaryOp
     = OpAdd | OpSub | OpMul | OpDiv | OpMod
     | OpEq  | OpNeq | OpLt  | OpLte | OpGt | OpGte
     | OpAnd | OpOr
-    deriving (Show, Eq, Generic)
+    deriving (Show, Eq, Ord, Generic)
 
 data UnaryOp = OpNeg | OpNot deriving (Show, Eq, Generic)
 

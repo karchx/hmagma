@@ -2,17 +2,19 @@
 
 module HMagma.IR 
     ( genProgramIR
+    , Operand(..)
     , TAC(..)
+    , Ident(..)
+    , Temp(..)
     ) where
 
 import Control.Monad.State
 import Data.Text (Text)
-import qualified Data.Text as T
 
 import HMagma.AST
 
-newtype Ident = Ident Text deriving (Show, Eq)
-newtype Temp  = Temp  Int  deriving (Show, Eq) 
+newtype Ident = Ident Text deriving (Show, Eq, Ord)
+newtype Temp  = Temp  Int  deriving (Show, Eq, Ord) 
 
 data Operand
     = OInt Integer
@@ -22,7 +24,7 @@ data Operand
     | OVar Ident
     | OTemp Temp
     | ONil
-    deriving (Show)
+    deriving (Show, Eq, Ord)
 
 data TAC
     = TAssign Ident Operand
