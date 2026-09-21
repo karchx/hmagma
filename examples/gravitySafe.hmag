@@ -1,0 +1,6 @@
+fn gravitySafe(m1, m2, r2) = { 
+    if r2 == 0 then
+        0
+    else
+        m1 * m2 / r2
+}

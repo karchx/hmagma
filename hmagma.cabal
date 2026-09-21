@@ -26,7 +26,7 @@ source-repository head
 library
   exposed-modules:
       HMagma.AST
-      HMagma.IR
+      HMagma.HIR
       HMagma.Lexer
       HMagma.OptPasses
       HMagma.Parser

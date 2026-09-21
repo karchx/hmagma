@@ -5,7 +5,7 @@ module Main (main) where
 
 import qualified Data.Text.IO as TIO
 import HMagma.Parser
-import HMagma.IR
+import HMagma.HIR
 
 
 main :: IO ()
@@ -14,4 +14,4 @@ main = do
     let stmt = parseHMagma "example.hmag" src
     case stmt of 
         Left err -> print err
-        Right res -> print $ genProgramIR res
+        Right res -> print $ genProgramHIR res
