@@ -32,7 +32,9 @@ data HIRLit
 data HIRExpr
     = HLit HIRLit
     | HVar Ident
+    | HAssignExpr Ident HIRExpr
     | HBin BinaryOp HIRExpr HIRExpr
+    | HUnary UnaryOp HIRExpr
     | HIf  HIRExpr HIRExpr HIRExpr
     | HBlock [HIRStmt] HIRExpr
     deriving (Show, Eq)
@@ -51,18 +53,20 @@ genProgramHIR ast =
 
 hoist :: [Stmt] -> ([HIRFun], [HIRStmt])
 hoist [] = ([], [])
-hoist (stmt : rest) =
-    let (funcs, stmts) = hoist rest
-    in case stmt of
-        SFuncDef _ name params body ->
-            let newFun = HIRFun
-                    { funName   = Ident name
-                    , funParams = map Ident params
-                    , funBody   = genExpr body
-                    }
-            in (newFun : funcs, stmts)
-        othStmt ->
-            (funcs, genStmt othStmt : stmts)
+hoist stmts =
+        let (revFuncs, revStmts) = foldl' step ([], []) stmts
+        in (reverse revFuncs, reverse revStmts)
+    where
+        step (funcs, stmts) stmt = case stmt of
+            SFuncDef _ name params body ->
+                let newFun = HIRFun
+                        { funName   = Ident name
+                        , funParams = map Ident params
+                        , funBody   = genExpr body
+                        }
+                in (newFun : funcs, stmts)
+            othStmt ->
+                (funcs, genStmt othStmt : stmts)
 
 genExpr :: Expr -> HIRExpr
 genExpr (ELiteral _ lit) = HLit (toHIRLit lit)
@@ -73,10 +77,12 @@ genExpr (ELiteral _ lit) = HLit (toHIRLit lit)
         toHIRLit (LitBool b)   = HBool b
         toHIRLit LitNil        = HNil
 genExpr (EVar _ name) = HVar (Ident name)
+genExpr (EAssign _ name expr) = HAssignExpr (Ident name) (genExpr expr)
+genExpr (EUnary _ unaryOp expr) = HUnary unaryOp (genExpr expr)
 genExpr (EBinary _ op e1 e2) =
     HBin op (genExpr e1) (genExpr e2)
 genExpr (EIf _ c t e) = HIf (genExpr c) (genExpr t) (genExpr e)
-getnExpr (EBlock _ stmts maybeExpr) =
+genExpr (EBlock _ stmts maybeExpr) =
     let hirStmts = map genStmt stmts
         hirExpr = case maybeExpr of
             Nothing -> HLit HNil
