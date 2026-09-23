@@ -31,6 +31,7 @@ library
       HMagma.OptPasses
       HMagma.Parser
       HMagma.Tokens
+      HMagma.TypeChecker
   other-modules:
       Paths_hmagma
   autogen-modules:

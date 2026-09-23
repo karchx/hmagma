@@ -1,7 +1,13 @@
 {-# LANGUAGE OverloadedStrings #-}
 
 module HMagma.HIR
-    ( genProgramHIR 
+    ( genProgramHIR
+    , Ident
+    , HIRProg(..)
+    , HIRFun(..)
+    , HIRLit(..)
+    , HIRExpr(..)
+    , HIRStmt(..)
     ) where
 
 import Data.Text (Text)
