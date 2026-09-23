@@ -2,7 +2,7 @@
 
 module HMagma.HIR
     ( genProgramHIR
-    , Ident
+    , Ident(..)
     , HIRProg(..)
     , HIRFun(..)
     , HIRLit(..)
