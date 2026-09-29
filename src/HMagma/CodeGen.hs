@@ -28,7 +28,7 @@ codegenExpr (HIf c t e)       =
     "(" <> codegenExpr c <> " ? " <>
     codegenExpr t <> " : " <>
     codegenExpr e <> ")"
-codegenExpr (HBlock _ exprs) = codegenExpr exprs
+codegenExpr (HBlock _ exprs) = "\treturn " <> codegenExpr exprs
 
 codegen :: HIRProg -> Text
 codegen (HIRProg funcs _) = T.intercalate "\n\n" (map codeFun funcs)
