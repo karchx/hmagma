@@ -75,3 +75,5 @@ foldFun (HIRFun name params body) = newFun
 constantFold :: HIRProg -> HIRProg
 constantFold (HIRProg funcs globals) =
     HIRProg (map foldFun funcs) (map foldStmt globals)
+
+-- constPropagation :: HIRProg -> HIRProg
