@@ -4,3 +4,5 @@ fn gravitySafe(m1, m2, r2) = {
     else
         m1 * m2 / r2
 }
+
+fn main() = {}

@@ -1,5 +1,6 @@
 module Graph.ControlFlow (buildCFG) where
 
+import qualified Data.Map.Strict as M
 import qualified Data.IntMap.Strict as IM
 import qualified Data.Text as T
 import Control.Monad.State.Strict
@@ -143,5 +144,5 @@ buildFunctionCFG (HIRFun (Ident name) _ body) =
         (_, finalState) = runState build initialState
     in graph finalState
 
-buildCFG :: HIRProg -> [CFG]
-buildCFG (HIRProg funcs _) = map buildFunctionCFG funcs
+buildCFG :: HIRProg -> M.Map Ident CFG
+buildCFG (HIRProg funcs _) = M.fromList [ (funName f, buildFunctionCFG f) | f <- funcs ]
