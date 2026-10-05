@@ -1,9 +1,10 @@
-module Graph.ControlFlow where
+module Graph.ControlFlow (buildCFG) where
 
 import qualified Data.IntMap.Strict as IM
+import qualified Data.Text as T
 import Control.Monad.State.Strict
 
-import HMagma.HIR (HIRExpr(..), HIRStmt(..))
+import HMagma.HIR (HIRExpr(..), HIRStmt(..), HIRFun(..), HIRProg(..), Ident(..))
 
 type Label = Int
 
@@ -25,6 +26,9 @@ type CFG = IM.IntMap BasicBlock
 
 data CFGBuilderState = CFGBuilderState
     { nextLabel :: Label
+    , nextTemp :: Int
+    , currentBlock :: Label
+    , stmtsBuffer :: [HIRStmt]
     , graph :: CFG
     }
 
@@ -37,36 +41,107 @@ freshLabel = do
     put (s { nextLabel = l + 1 })
     return l
 
-emitBlock :: BasicBlock -> CFGBuilder ()
-emitBlock bb = modify $ \s ->
-    s { graph = IM.insert (bbId bb) bb (graph s) }
+freshTemp :: CFGBuilder Ident
+freshTemp = do
+    s <- get
+    let t = nextTemp s
+    put (s { nextTemp = t + 1 })
+    return $ Ident (T.pack ("t_" ++ show t))
 
+emitStmt :: HIRStmt -> CFGBuilder ()
+emitStmt stmt = modify $ \s ->
+    s { stmtsBuffer = stmtsBuffer s ++ [stmt] }
 
-buildCFG :: [HIRStmt] -> Label -> Label -> CFGBuilder ()
-buildCFG [] currentLabel exitLabel =
-    emitBlock $ BasicBlock currentLabel [] (TJump exitLabel)
+finishBlock :: Terminator -> CFGBuilder ()
+finishBlock term = do
+    s <- get
+    let bb = BasicBlock (currentBlock s) (stmtsBuffer s) term
+    put $ s { graph = IM.insert (currentBlock s) bb (graph s) 
+            , stmtsBuffer = [] }
 
-buildCFG (stmt:stmts) currentLabel exitLabel = case stmt of
-    HAssign _ _ ->
-        buildCFG stmts currentLabel exitLabel
-    HIf cond thenStmt elseStmt -> do
-        trueLabel   <- freshLabel
-        falseLabel  <- freshLabel
-        mergeLabel  <- freshLabel
+startBlock :: Label -> CFGBuilder ()
+startBlock label = modify $ \s -> s { currentBlock = label }
 
-        emitBlock $ BasicBlock currentLabel [] (TBranch cond trueLabel falseLabel)
+lowerExpr :: HIRExpr -> CFGBuilder Ident
+lowerExpr expr = case expr of
+    HVar ident -> return ident
+    HLit lit -> do
+        t <- freshTemp
+        emitStmt $ HAssign t (HLit lit)
+        return t
+    HBin op e1 e2 -> do
+        t1 <- lowerExpr e1
+        t2 <- lowerExpr e2
+        tRes <- freshTemp
+        emitStmt $ HAssign tRes (HBin op (HVar t1) (HVar t2))
+        return tRes
 
-        buildCFG [thenStmt] trueLabel mergeLabel
-        buildCFG [elseStmt] falseLabel mergeLabel
-        buildCFG stmts mergeLabel exitLabel
+    HIf cond eThen eElse -> do
+        condTemp <- lowerExpr cond
 
-    HReturn expr ->
-        emitBlock $ BasicBlock currentLabel [] (TReturn expr)
-    HBlock innerStmts _ ->
-        buildCFG (innerStmts ++ stmts) currentLabel exitLabel
+        resTemp <- freshTemp
+
+        trueLabel <- freshLabel
+        falseLabel <- freshLabel
+        mergeLabel <- freshLabel
+
+        finishBlock $ TBranch (HVar condTemp) trueLabel falseLabel
+
+        startBlock trueLabel
+        thenTemp <- lowerExpr eThen
+        emitStmt $ HAssign resTemp (HVar thenTemp)
+        finishBlock $ TJump mergeLabel
+
+        -- False Block
+        startBlock falseLabel
+        elseTemp <- lowerExpr eElse
+        emitStmt $ HAssign resTemp (HVar elseTemp)
+        finishBlock $ TJump mergeLabel
+
+        startBlock mergeLabel
+        return resTemp
+    
+    HBlock innerStmts innerExpr -> do
+        mapM_ lowerStmt innerStmts
+        lowerExpr innerExpr
+
+lowerStmt :: HIRStmt -> CFGBuilder ()
+lowerStmt stmt = case stmt of
+    HAssign ident expr -> do
+        t <- lowerExpr expr
+        emitStmt $ HAssign ident (HVar t)
+
+    HExpr expr -> do
+        _ <- lowerExpr expr
+        return ()
+
+    HReturn expr -> do
+        t <- lowerExpr expr
+        finishBlock $ TReturn (HVar t)
+
+        deadLabel <- freshLabel
+        startBlock deadLabel
 
 buildFunctionCFG :: HIRFun -> CFG
-buildFunctionCFG fun =
-    let initialSate = CFGBuilderState { nextLabel = 1, graph = IM.empty }
-        entryLabel = 0
-        exitLabel = -1
+buildFunctionCFG (HIRFun (Ident name) _ body) =
+    let entryLabel = 0
+        initialState = CFGBuilderState
+            { nextLabel = 1
+            , nextTemp = 0
+            , currentBlock = entryLabel
+            , stmtsBuffer = []
+            , graph = IM.empty
+            }
+        (HBlock stmts retExpr) = body
+
+        build = do
+            mapM_ lowerStmt stmts
+
+            tRet <- lowerExpr retExpr
+
+            finishBlock $ TReturn (HVar tRet)
+        (_, finalState) = runState build initialState
+    in graph finalState
+
+buildCFG :: HIRProg -> [CFG]
+buildCFG (HIRProg funcs _) = map buildFunctionCFG funcs

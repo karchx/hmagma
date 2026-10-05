@@ -25,6 +25,7 @@ source-repository head
 
 library
   exposed-modules:
+      Graph.ControlFlow
       HMagma.AST
       HMagma.CodeGen
       HMagma.HIR
