@@ -1,5 +1,10 @@
+{-# LANGUAGE GADTs #-}
+
 module HMagma.OptPasses ( constantFold ) where
 
+import Data.Fixed
+import qualified Data.Map as Map
+import qualified Data.Set as Set
 import HMagma.HIR 
     ( HIRExpr(..)
     , HIRLit(..)
@@ -8,69 +13,81 @@ import HMagma.HIR
     , HIRFun(..)
     )
 import HMagma.AST (BinaryOp(..))
+import Graph.ControlFlow (CFG(..), BasicBlock(..))
 
-evalInt :: BinaryOp -> Integer -> Integer -> Maybe Integer
-evalInt OpAdd a b = Just (a + b)
-evalInt OpSub a b = Just (a - b)
-evalInt OpMul a b = Just (a * b)
-evalInt OpDiv a b
-    | b == 0    = Nothing
-    | otherwise = Just (a `div` b)
-evalInt OpMod a b
-    | b == 0    = Nothing
-    | otherwise = Just (a `mod` b)
-evalInt _ _ _     = Nothing
+type NodeId = Int
+type VarState = Map.Map String (Lattice Integer)
+data Lattice a = Top | Const a | Bottom deriving (Eq, Show)
 
-evalFloat :: BinaryOp -> Double -> Double -> Maybe Double
-evalFloat OpAdd a b = Just (a + b)
-evalFloat OpSub a b = Just (a - b)
-evalFloat OpMul a b = Just (a * b)
-evalFloat OpDiv a b
-    | b == 0    = Nothing
-    | otherwise = Just (a / b)
-evalFloat OpMod _ _ = Nothing
-evalFloat _ _ _     = Nothing
+joinLattice :: Eq a => Lattice a -> Lattice a -> Lattice a
+joinLattice Top x = x
+joinLattice x Top = x
+joinLattice Bottom _ = Bottom
+joinLattice _ Bottom = Bottom
+joinLattice (Const a) (Const b)
+    | a == b    = Const a
+    | otherwise =  Bottom
 
+evalOpInt :: BinaryOp -> Integer -> Integer -> Lattice HIRLit
+evalOpInt OpAdd a b = Const (HInt (a + b))
+evalOpInt OpMult a b = Const (HInt (a * b))
+evalOpInt OpSub a b = Const (HInt (a - b))
+evalOpInt OpMod _ 0 = Bottom
+evalOpInt OpMod a b = Const (HInt (a `mod` b))
+evalOpInt OpDiv _  0 = Bottom -- division by zero
+evalOpInt OpDiv a b = Const (HInt (a `div` b))
 
-foldExpr :: HIRExpr -> HIRExpr
-foldExpr (HBin op l r) =
-    let l' = foldExpr l
-        r' = foldExpr r
-    in case(l', r') of
-        (HLit (HInt a), HLit (HInt b)) ->
-            case evalInt op a b of
-                Just v -> HLit (HInt v)
-                Nothing -> HBin op l' r'
-        (HLit (HFloat a), HLit (HFloat b)) ->
-            case evalFloat op a b of
-                Just v -> HLit (HFloat v)
-                Nothing -> HBin op l' r'
-        _ -> HBin op l' r'
+evalOpFloat :: BinaryOp -> Lattice Double -> Lattice Double -> Lattice Double
+evalOpFloat OpAdd a b = Const (HFloat (a + b))
+evalOpFloat OpMult a b = Const (HFloat (a * b))
+evalOpFloat OpSub a b = Const (HFloat (a - b))
+evalOpFloat OpDiv _ 0 = Bottom -- division by zero
+evalOpFloat OpDiv a b = Const (HFloat (a / b))
+evalOpFloat OpMod _ 0 = Bottom
+evalOpFloat OpMod a b = Const (HFloat (mod' a b))
 
-foldExpr (HIf cond t e) =
-    let c' = foldExpr cond
-    in case c' of
-        HLit (HBool True)   -> foldExpr t
-        HLit (HBool False)  -> foldExpr e
-        _                   -> HIf c' (foldExpr t) (foldExpr e)
+evalExpr :: VarState -> HIRExpr -> Lattice HIRLit
+evalExpr _ (HIRLit (HInt n)) = Const (HInt n)
+evalExpr _ (HIRLit (HFloat n)) = Const (HFloat n)
+evalExpr state (HBin op l r) =
+    let l' = evalExpr state l
+        r' = evalExpr state r
+    in case (l', r') of
+        (Bottom, _) -> Bottom
+        (_, Bottom) -> Bottom
+        (Top, _)    -> Top
+        (_, Top)    -> Top
 
-foldExpr (HBlock stmts expr) =
-    HBlock (map foldStmt stmts) (foldExpr expr)
-foldExpr e = e
+        (Const (HInt _), Const (HInt _))        -> evalIntExpr op l' r'
+        (Const (HFloat _), Const (HFloat _))    -> evalFloatExpr op l' r'
+        _                                       -> Bottom
 
-foldStmt :: HIRStmt -> HIRStmt 
-foldStmt (HAssign a expr) = HAssign a (foldExpr expr)
-foldStmt (HExpr expr) = HExpr (foldExpr expr)
-foldStmt (HReturn rexpr) = HReturn (foldExpr rexpr)
+evalInstr :: VarState -> HIRStmt -> VarState
+evalInstr state (HAssign (Ident lhs) rhs) =
+    let
+        newValue = evalExpr state rhs
+        oldValue = Map.findWithDefault Top lhs state
+        joinedValue = joinLattice oldValue newValue
+    in
+        Map.insert lhs joinedValue state
+evalInstr state _ = state
 
-foldFun :: HIRFun -> HIRFun
-foldFun (HIRFun name params body) = newFun
-    where
-        newFun = HIRFun
-            { funName = name
-            , funParams = params
-            , funBody = foldExpr body 
-            }
+transferFunction :: VarState -> BasicBlock -> (VarState, [NodeId])
+transferFunction currentState block = foldl evalInstr currentState (bbStmts block)
+
+worklist :: Set.Set NodeId -> VarState -> CFG -> VarState
+worklist queue state cfg =
+    case Set.minView queue of
+         Nothing -> state
+         Just (node, restQueue) ->
+            let
+                (newState, changed) = transferFunction node state cfg
+
+                newQueue = if changed
+                           then foldr Set.insert restQueue (successors cfg node)
+                           else restQueue
+            in
+                worklist newQueue newState cfg
 
 constantFold :: HIRProg -> HIRProg
 constantFold (HIRProg funcs globals) =

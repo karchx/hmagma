@@ -1,4 +1,8 @@
-module Graph.ControlFlow (buildCFG) where
+module Graph.ControlFlow 
+    ( buildCFG
+    , CFG(..)
+    , BasicBlock(..)
+    ) where
 
 import qualified Data.Map.Strict as M
 import qualified Data.IntMap.Strict as IM
