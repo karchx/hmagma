@@ -31,14 +31,24 @@ joinLattice (Const a) (Const b)
     | a == b    = Const a
     | otherwise =  Bottom
 
+
+fromBool :: Bool -> Lattice HIRLit
+fromBool True = Const (HInt 1)
+fromBool False = Const (HInt 0)
+
 evalOpInt :: BinaryOp -> Integer -> Integer -> Lattice HIRLit
-evalOpInt OpAdd a b = Const (HInt (a + b))
-evalOpInt OpMul a b = Const (HInt (a * b))
-evalOpInt OpSub a b = Const (HInt (a - b))
-evalOpInt OpMod _ 0 = Bottom
-evalOpInt OpMod a b = Const (HInt (a `mod` b))
+evalOpInt OpAdd a b  = Const (HInt (a + b))
+evalOpInt OpMul a b  = Const (HInt (a * b))
+evalOpInt OpSub a b  = Const (HInt (a - b))
+evalOpInt OpMod _ 0  = Bottom
+evalOpInt OpMod a b  = Const (HInt (a `mod` b))
 evalOpInt OpDiv _  0 = Bottom -- division by zero
-evalOpInt OpDiv a b = Const (HInt (a `div` b))
+evalOpInt OpDiv a b  = Const (HInt (a `div` b))
+evalOpInt OpEq a b   = fromBool (a == b)
+evalOpInt OpNeq a b  = fromBool (a /= b)
+evalOpInt OpLt a b   = fromBool (a < b)
+evalOpInt OpGt a b   = fromBool (a > b)
+evalOpInt _ _ _      = Bottom
 
 evalOpFloat :: BinaryOp -> Double -> Double -> Lattice HIRLit
 evalOpFloat OpAdd a b = Const (HFloat (a + b))
@@ -48,9 +58,15 @@ evalOpFloat OpDiv _ 0 = Bottom -- division by zero
 evalOpFloat OpDiv a b = Const (HFloat (a / b))
 evalOpFloat OpMod _ 0 = Bottom
 evalOpFloat OpMod a b = Const (HFloat (mod' a b))
+evalOpFloat OpEq a b  = fromBool (a == b)
+evalOpFloat OpNeq a b = fromBool (a /= b)
+evalOpFloat OpLt a b  = fromBool (a < b)
+evalOpFloat OpGt a b  = fromBool (a > b)
+evalOpFloat _ _ _     = Bottom
 
 evalExpr :: VarState -> HIRExpr -> Lattice HIRLit
 evalExpr _ (HLit lit) = Const lit
+evalExpr state (HVar (Ident name)) = Map.findWithDefault Top name state
 evalExpr state (HBin op l r) =
     let l' = evalExpr state l
         r' = evalExpr state r
