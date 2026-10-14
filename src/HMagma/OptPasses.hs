@@ -18,9 +18,15 @@ import HMagma.AST (BinaryOp(..))
 import Graph.ControlFlow (CFG, PredMap, BasicBlock(..), Terminator(..), getBlock, getPredecessors)
 
 type NodeId = Int
+type ParamList = [Ident]
 type VarState = Map.Map Text (Lattice HIRLit)
 type OutState = Map.Map NodeId (VarState)
 data Lattice a = Top | Const a | Bottom deriving (Eq, Show)
+
+
+-- Params functions for default is Bottom
+initEntryState :: ParamList -> VarState
+initEntryState params = Map.fromList [ (name, Bottom) | Ident name <- params ]
 
 joinLattice :: Eq a => Lattice a -> Lattice a -> Lattice a
 joinLattice Top x = x
@@ -30,7 +36,6 @@ joinLattice _ Bottom = Bottom
 joinLattice (Const a) (Const b)
     | a == b    = Const a
     | otherwise =  Bottom
-
 
 fromBool :: Bool -> Lattice HIRLit
 fromBool True = Const (HInt 1)
@@ -103,17 +108,20 @@ transferFunction inState block =
 joinStates :: VarState -> VarState -> VarState
 joinStates = Map.unionWith joinLattice
 
-worklist :: PredMap -> Set.Set NodeId -> OutState -> CFG -> OutState
-worklist predMap queue outStates cfg =
+-- function: I(b, OUT)
+computeInState :: NodeId -> VarState -> PredMap -> OutState -> VarState
+computeInState node entryState predMap outStates =
+    let preds = getPredecessors predMap node
+        baseState = if node == 0 then entryState else Map.empty
+    in foldl (\acc p -> joinStates acc (Map.findWithDefault Map.empty p outStates)) baseState preds
+
+worklist :: VarState -> PredMap -> Set.Set NodeId -> OutState -> CFG -> OutState
+worklist entryState predMap queue outStates cfg =
     case Set.minView queue of
          Nothing -> outStates
          Just (node, restQueue) ->
-            let
-                block = getBlock cfg node
-                preds = getPredecessors predMap node
-
-                inState = foldl (\acc p -> joinStates acc (Map.findWithDefault Map.empty p outStates)) Map.empty preds
-
+            let block = getBlock cfg node
+                inState = computeInState node entryState predMap outStates
                 (newState, reachableSuccessors) = transferFunction inState block
 
                 oldState = Map.findWithDefault Map.empty node outStates
@@ -126,8 +134,21 @@ worklist predMap queue outStates cfg =
                         newQueue = foldr Set.insert restQueue reachableSuccessors
                     in worklist predMap newQueue newOutStates cfg
 
+
+runWorkList :: ParamList -> CFG -> OutState
+runWorkList params cfg =
+    let predMap = buildPredMap cfg
+        entryState = initEntryState params
+        initQueue = Set.singleton 0
+    in worklist entryState predMap initQueue Map.empty cfg
+
 -- constantFold :: HIRProg -> HIRProg
 -- constantFold (HIRProg funcs globals) =
 --     HIRProg (map foldFun funcs) (map foldStmt globals)
 
 -- constPropagation :: HIRProg -> HIRProg
+constPropagation :: HIRProg -> OutState
+constPropagation prog = 
+    let cfg = Map.elems (buildCFG prog)
+        params = []
+    in runWorkList params cfg
