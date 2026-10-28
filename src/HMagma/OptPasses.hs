@@ -15,7 +15,16 @@ import HMagma.HIR
     , Ident(..)
     )
 import HMagma.AST (BinaryOp(..))
-import Graph.ControlFlow (CFG, PredMap, BasicBlock(..), Terminator(..), getBlock, getPredecessors)
+import Graph.ControlFlow 
+    ( CFG
+    , PredMap
+    , BasicBlock(..)
+    , Terminator(..)
+    , buildPredMap
+    , buildCFG
+    , getBlock
+    , getPredecessors
+    )
 
 type NodeId = Int
 type ParamList = [Ident]
