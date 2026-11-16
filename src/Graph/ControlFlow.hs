@@ -1,9 +1,10 @@
 module Graph.ControlFlow 
-    ( buildCFG
+    ( buildFunctionCFG
     , CFG
     , PredMap
     , BasicBlock(..)
     , Terminator(..)
+    , OptimizedFun(..)
     , getBlock
     , buildPredMap
     , getPredecessors
@@ -19,6 +20,7 @@ import HMagma.HIR (HIRExpr(..), HIRStmt(..), HIRFun(..), HIRProg(..), Ident(..))
 type PredMap = IM.IntMap [Label]
 type Label = Int
 
+data OptimizedFun = OptimizedFun Ident [Ident] CFG
 -- terminator edges of the graph
 data Terminator
     = TBranch HIRExpr Label Label
@@ -134,7 +136,7 @@ lowerStmt stmt = case stmt of
         startBlock deadLabel
 
 buildFunctionCFG :: HIRFun -> CFG
-buildFunctionCFG (HIRFun (Ident name) _ body) =
+buildFunctionCFG (HIRFun _ _ (HBlock stmts retExpr)) =
     let entryLabel = 0
         initialState = CFGBuilderState
             { nextLabel = 1
@@ -143,19 +145,15 @@ buildFunctionCFG (HIRFun (Ident name) _ body) =
             , stmtsBuffer = []
             , graph = IM.empty
             }
-        (HBlock stmts retExpr) = body
 
         build = do
             mapM_ lowerStmt stmts
 
             tRet <- lowerExpr retExpr
-
             finishBlock $ TReturn (HVar tRet)
+
         (_, finalState) = runState build initialState
     in graph finalState
-
-buildCFG :: HIRProg -> M.Map Ident CFG
-buildCFG (HIRProg funcs _) = M.fromList [ (funName f, buildFunctionCFG f) | f <- funcs ]
 
 buildPredMap :: CFG -> PredMap
 buildPredMap cfg = IM.foldlWithKey' addEdges IM.empty cfg

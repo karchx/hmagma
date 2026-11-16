@@ -11,7 +11,7 @@ import HMagma.Parser
 import HMagma.HIR
 import HMagma.TypeChecker
 import HMagma.CodeGen
-
+import HMagma.OptPasses
 
 compiler :: String -> T.Text -> Either String T.Text
 compiler filename src = do
@@ -19,8 +19,9 @@ compiler filename src = do
 
     -- Generate HIR
     hirProg <- typeCheck (genProgramHIR ast)
+    let optimized = optimizeProgram hirProg
 
-    pure (codegen hirProg)
+    pure (codegen optimized)
 
 main :: IO ()
 main = do

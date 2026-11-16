@@ -1,9 +1,10 @@
 {-# LANGUAGE GADTs #-}
 
-module HMagma.OptPasses (worklist) where
+module HMagma.OptPasses (optimizeProgram) where
 
 import Data.Fixed
 import qualified Data.Map as Map
+import qualified Data.IntMap.Strict as IM
 import qualified Data.Set as Set
 import Data.Text (Text)
 import HMagma.HIR 
@@ -20,8 +21,9 @@ import Graph.ControlFlow
     , PredMap
     , BasicBlock(..)
     , Terminator(..)
+    , OptimizedFun(..)
     , buildPredMap
-    , buildCFG
+    , buildFunctionCFG
     , getBlock
     , getPredecessors
     )
@@ -137,11 +139,11 @@ worklist entryState predMap queue outStates cfg =
             in
                 if newState == oldState
                 then
-                    worklist predMap restQueue outStates cfg
+                    worklist entryState predMap restQueue outStates cfg
                 else
                     let newOutStates = Map.insert node newState outStates
                         newQueue = foldr Set.insert restQueue reachableSuccessors
-                    in worklist predMap newQueue newOutStates cfg
+                    in worklist entryState predMap newQueue newOutStates cfg
 
 
 runWorkList :: ParamList -> CFG -> OutState
@@ -151,13 +153,55 @@ runWorkList params cfg =
         initQueue = Set.singleton 0
     in worklist entryState predMap initQueue Map.empty cfg
 
--- constantFold :: HIRProg -> HIRProg
--- constantFold (HIRProg funcs globals) =
---     HIRProg (map foldFun funcs) (map foldStmt globals)
+optimizeProgram :: HIRProg -> [OptimizedFun]
+optimizeProgram (HIRProg funcs _) = map optimizeFun funcs
 
--- constPropagation :: HIRProg -> HIRProg
-constPropagation :: HIRProg -> OutState
-constPropagation prog = 
-    let cfg = Map.elems (buildCFG prog)
-        params = []
-    in runWorkList params cfg
+optimizeFun :: HIRFun -> OptimizedFun
+optimizeFun fun@(HIRFun name params _) =
+    let cfg = buildFunctionCFG fun
+        outStates = runWorkList params cfg
+        optCfg = optimizedCFG outStates cfg
+    in OptimizedFun name params optCfg
+
+optimizedCFG :: OutState -> CFG -> CFG
+optimizedCFG outStates cfg =
+    IM.mapWithKey (\nodeId block -> foldBlock (outStates Map.! nodeId) block) cfg
+
+foldBlock :: VarState -> BasicBlock -> BasicBlock
+foldBlock state block =
+    block { bbStmts = map (foldStmt state) (bbStmts block)
+          , bbTerm = foldTerm state (bbTerm block) }
+
+foldStmt :: VarState -> HIRStmt -> HIRStmt
+foldStmt state (HAssign idStmt rhs) = HAssign idStmt (foldExpr state rhs)
+foldStmt state (HExpr expr) = HExpr (foldExpr state expr)
+foldStmt _ stmt = stmt
+
+foldExpr :: VarState -> HIRExpr -> HIRExpr
+foldExpr state expr@(HVar (Ident name)) =
+    case Map.findWithDefault Top name state of
+        Const lit -> HLit lit
+        _         -> expr
+foldExpr state (HBin op l r) =
+    let l' = foldExpr state l
+        r' = foldExpr state r
+    in case (l', r') of
+        (HLit (HInt a), HLit (HInt b)) ->
+            case evalOpInt op a b of
+                Const lit -> HLit lit
+                _         -> HBin op l' r'
+        (HLit (HFloat a), HLit (HFloat b)) ->
+            case evalOpFloat op a b of
+                Const lit -> HLit lit
+                _         -> HBin op l' r'
+        _ -> HBin op l' r'
+foldExpr _ expr = expr
+
+foldTerm :: VarState -> Terminator -> Terminator
+foldTerm state term@(TBranch cond t f) =
+    case foldExpr state cond of
+        HLit (HInt 1) -> TJump t
+        HLit (HInt 0) -> TJump f
+        _             -> term
+foldTerm state (TReturn expr) = TReturn (foldExpr state expr)
+foldTerm _ term = term
