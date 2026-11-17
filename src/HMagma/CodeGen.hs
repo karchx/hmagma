@@ -3,6 +3,7 @@
 module HMagma.CodeGen ( codegen ) where
 
 import qualified Data.Text as T
+import qualified Data.Set as Set
 import qualified Data.IntMap.Strict as IM
 import Data.Text (Text)
 import HMagma.HIR
@@ -15,10 +16,16 @@ codegen funcs = T.intercalate "\n\n" (map codeFun funcs)
 
 codeFun :: OptimizedFun -> Text
 codeFun (OptimizedFun (Ident name) params cfg) =
+    let blocks = IM.elems cfg
+        assignedVars = Set.fromList [ lhs | BasicBlock _ stmts _ <- blocks, HAssign (Ident lhs) _ <- stmts ]
+        localVars = assignedVars `Set.difference` Set.fromList [ p | Ident p <- params ]
+        decls = T.concat [ "\tdouble " <> v <> ";\n" | v <- Set.toList localVars ]
+    in
     "__device__ double " <> name <> "(" <>
-    T.intercalate ", " [ "double" <> p | Ident p <- params ] <>
+    T.intercalate ", " [ "double " <> p | Ident p <- params ] <>
     ") {\n" <>
-    T.concat (map codegenBlock (IM.elems cfg)) <>
+    decls <>
+    T.concat (map codegenBlock blocks) <>
     "}\n"
 
 codegenBlock :: BasicBlock -> Text
@@ -29,7 +36,7 @@ codegenBlock (BasicBlock bId stmts term) =
 
 codegenStmt :: HIRStmt -> Text
 codegenStmt (HAssign (Ident lhs) rhs) =
-    "\tdouble " <> lhs <> " = " <> codegenExpr rhs <> ";\n" 
+    "\t" <> lhs <> " = " <> codegenExpr rhs <> ";\n" 
 codegenStmt (HExpr expr) =
     "\t" <> codegenExpr expr <> ";\n"
 codegenStmt (HReturn expr) =
