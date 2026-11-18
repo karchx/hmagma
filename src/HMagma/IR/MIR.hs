@@ -7,6 +7,10 @@ module HMagma.IR.MIR
     , CFGBuilderState(..)
     , Terminator(..)
     , Label(..)
+    , buildPredMap
+    , getSuccessors
+    , getBlock
+    , getPredecessors
     ) where
 
 import Control.Monad.State.Strict
@@ -42,3 +46,25 @@ data CFGBuilderState = CFGBuilderState
     }
 
 type CFGBuilder a = State CFGBuilderState a
+
+buildPredMap :: CFG -> PredMap
+buildPredMap cfg = IM.foldlWithKey' addEdges IM.empty cfg
+    where
+        addEdges acc currentBlockId block =
+            let succs = getSuccessors block
+            in foldl' (\m succId -> IM.insertWith (++) succId [currentBlockId] m) acc succs
+
+getSuccessors :: BasicBlock -> [Label]
+getSuccessors block = case bbTerm block of
+    TReturn _ -> []
+    TJump target -> [target]
+    TBranch _ trueTarget falseTarget -> [trueTarget, falseTarget]
+    TExit -> []
+
+getBlock :: CFG -> Label -> BasicBlock
+getBlock cfg node = IM.findWithDefault emptyBlock node cfg
+    where
+        emptyBlock = BasicBlock node [] (TExit)
+
+getPredecessors :: PredMap -> Label -> [Label]
+getPredecessors predMap node = IM.findWithDefault [] node predMap

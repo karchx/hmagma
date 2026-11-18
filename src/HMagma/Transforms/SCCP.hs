@@ -23,13 +23,11 @@ import HMagma.IR.MIR
     , PredMap
     , BasicBlock(..)
     , Terminator(..)
-    )
-import HMagma.IR.Lowering
-    ( buildFunctionCFG
     , buildPredMap
     , getBlock
     , getPredecessors
     )
+import HMagma.IR.Lowering ( buildFunctionCFG )
 import HMagma.Frontend.AST (BinaryOp(..))
 
 data OptimizedFun = OptimizedFun Ident [Ident] CFG

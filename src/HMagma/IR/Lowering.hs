@@ -1,10 +1,5 @@
 
-module HMagma.IR.Lowering
-    ( buildFunctionCFG
-    , getBlock
-    , buildPredMap
-    , getPredecessors
-    ) where
+module HMagma.IR.Lowering ( buildFunctionCFG ) where
 
 import qualified Data.Map.Strict as M
 import qualified Data.IntMap.Strict as IM
@@ -121,24 +116,3 @@ buildFunctionCFG (HIRFun _ _ (HBlock stmts retExpr)) =
 
         (_, finalState) = runState build initialState
     in graph finalState
-
-buildPredMap :: CFG -> PredMap
-buildPredMap cfg = IM.foldlWithKey' addEdges IM.empty cfg
-    where
-        addEdges acc currentBlockId block =
-            let succs = getSuccessors block
-            in foldl (\m succId -> IM.insertWith (++) succId [currentBlockId] m) acc succs
-
-getSuccessors :: BasicBlock -> [Label]
-getSuccessors block = case bbTerm block of
-    TReturn _ -> []
-    TJump target -> [target]
-    TBranch _ trueTarget falseTarget -> [trueTarget, falseTarget]
-
-getBlock :: CFG -> Label -> BasicBlock
-getBlock cfg node = IM.findWithDefault emptyBlock node cfg
-    where
-        emptyBlock = BasicBlock node [] (TExit)
-
-getPredecessors :: PredMap -> Label -> [Label]
-getPredecessors predMap node = IM.findWithDefault [] node predMap
