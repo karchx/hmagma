@@ -1,6 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-module HMagma.Lexer 
+module HMagma.Frontend.Lexer 
     ( sc
     , lexeme
     , symbol
@@ -16,8 +16,8 @@ import qualified Data.Text as T
 import qualified Data.Set as Set
 import qualified Text.Megaparsec.Char.Lexer as L
 
-import HMagma.Tokens (TokenType(..))
-import qualified HMagma.Tokens as HT
+import HMagma.Frontend.Tokens (TokenType(..))
+import qualified HMagma.Frontend.Tokens as HT
 
 type Parser = Parsec Void Text
 

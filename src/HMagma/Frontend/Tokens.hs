@@ -1,7 +1,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE DeriveGeneric #-}
 
-module HMagma.Tokens
+module HMagma.Frontend.Tokens
     ( TokenType(..)
     , Token(..)
     , Position 

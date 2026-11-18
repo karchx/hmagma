@@ -1,10 +1,6 @@
-module Graph.ControlFlow 
+
+module HMagma.IR.Lowering
     ( buildFunctionCFG
-    , CFG
-    , PredMap
-    , BasicBlock(..)
-    , Terminator(..)
-    , OptimizedFun(..)
     , getBlock
     , buildPredMap
     , getPredecessors
@@ -15,37 +11,8 @@ import qualified Data.IntMap.Strict as IM
 import qualified Data.Text as T
 import Control.Monad.State.Strict
 
-import HMagma.HIR (HIRExpr(..), HIRStmt(..), HIRFun(..), HIRProg(..), Ident(..))
-
-type PredMap = IM.IntMap [Label]
-type Label = Int
-
-data OptimizedFun = OptimizedFun Ident [Ident] CFG
--- terminator edges of the graph
-data Terminator
-    = TBranch HIRExpr Label Label
-    | TJump Label
-    | TReturn HIRExpr
-    | TExit
-    deriving (Show)
-
-data BasicBlock = BasicBlock
-    { bbId :: Label
-    , bbStmts :: [HIRStmt] -- lineal instructions
-    , bbTerm :: Terminator
-    } deriving (Show)
-
-type CFG = IM.IntMap BasicBlock
-
-data CFGBuilderState = CFGBuilderState
-    { nextLabel :: Label
-    , nextTemp :: Int
-    , currentBlock :: Label
-    , stmtsBuffer :: [HIRStmt]
-    , graph :: CFG
-    }
-
-type CFGBuilder a = State CFGBuilderState a
+import HMagma.IR.HIR
+import HMagma.IR.MIR
 
 freshLabel :: CFGBuilder Label
 freshLabel = do

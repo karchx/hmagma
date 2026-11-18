@@ -1,6 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE DeriveGeneric #-}
-module HMagma.AST where
+module HMagma.Frontend.AST where
 
 import Data.Text (Text)
 import Text.Megaparsec (SourcePos)

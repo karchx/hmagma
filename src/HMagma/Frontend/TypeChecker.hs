@@ -1,9 +1,9 @@
-module HMagma.TypeChecker ( typeCheck ) where
+module HMagma.Frontend.TypeChecker ( typeCheck ) where
 
 import Control.Monad (foldM)
 import qualified Data.Map as Map
-import HMagma.HIR
-import HMagma.AST
+import HMagma.Frontend.AST
+import HMagma.IR.HIR
 
 data Type 
     = TDouble

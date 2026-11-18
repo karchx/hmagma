@@ -1,14 +1,15 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-module HMagma.CodeGen ( codegen ) where
+module HMagma.Backend.CudaGen ( codegen ) where
 
 import qualified Data.Text as T
 import qualified Data.Set as Set
 import qualified Data.IntMap.Strict as IM
 import Data.Text (Text)
-import HMagma.HIR
-import HMagma.AST
-import Graph.ControlFlow
+import HMagma.IR.HIR
+import HMagma.IR.MIR
+import HMagma.Frontend.AST
+import HMagma.Transforms.SCCP
 
 
 codegen :: [OptimizedFun] -> Text

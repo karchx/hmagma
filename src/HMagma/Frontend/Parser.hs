@@ -1,7 +1,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE BlockArguments #-}
 
-module HMagma.Parser 
+module HMagma.Frontend.Parser 
     ( parseHMagma
     , pProgram
     , pExpr
@@ -15,8 +15,8 @@ import Text.Megaparsec.Char
 import qualified Text.Megaparsec.Char.Lexer as L
 import Control.Monad.Combinators.Expr
 
-import HMagma.AST
-import HMagma.Lexer (sc, lexeme, symbol)
+import HMagma.Frontend.AST
+import HMagma.Frontend.Lexer (sc, lexeme, symbol)
 
 type Parser = Parsec Void Text
 

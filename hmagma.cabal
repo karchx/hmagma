@@ -7,8 +7,8 @@ cabal-version: 2.2
 name:           hmagma
 version:        0.1.0.0
 description:    Please see the README on GitHub at <https://github.com/githubuser/hmagma#readme>
-homepage:       https://github.com/githubuser/hmagma#readme
-bug-reports:    https://github.com/githubuser/hmagma/issues
+homepage:       https://github.com/karchx/hmagma#readme
+bug-reports:    https://github.com/karchx/hmagma/issues
 author:         Author name here
 maintainer:     example@example.com
 copyright:      2026 Author name here
@@ -21,19 +21,20 @@ extra-source-files:
 
 source-repository head
   type: git
-  location: https://github.com/githubuser/hmagma
+  location: https://github.com/karchx/hmagma
 
 library
   exposed-modules:
-      Graph.ControlFlow
-      HMagma.AST
-      HMagma.CodeGen
-      HMagma.HIR
-      HMagma.Lexer
-      HMagma.OptPasses
-      HMagma.Parser
-      HMagma.Tokens
-      HMagma.TypeChecker
+      HMagma.Backend.CudaGen
+      HMagma.Frontend.AST
+      HMagma.Frontend.Lexer
+      HMagma.Frontend.Parser
+      HMagma.Frontend.Tokens
+      HMagma.Frontend.TypeChecker
+      HMagma.IR.HIR
+      HMagma.IR.Lowering
+      HMagma.IR.MIR
+      HMagma.Transforms.SCCP
   other-modules:
       Paths_hmagma
   autogen-modules:

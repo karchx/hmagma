@@ -1,13 +1,16 @@
 {-# LANGUAGE GADTs #-}
 
-module HMagma.OptPasses (optimizeProgram) where
+module HMagma.Transforms.SCCP 
+    ( optimizeProgram
+    , OptimizedFun(..)
+    ) where
 
 import Data.Fixed
 import qualified Data.Map as Map
 import qualified Data.IntMap.Strict as IM
 import qualified Data.Set as Set
 import Data.Text (Text)
-import HMagma.HIR 
+import HMagma.IR.HIR 
     ( HIRExpr(..)
     , HIRLit(..)
     , HIRStmt(..)
@@ -15,18 +18,21 @@ import HMagma.HIR
     , HIRFun(..)
     , Ident(..)
     )
-import HMagma.AST (BinaryOp(..))
-import Graph.ControlFlow 
+import HMagma.IR.MIR
     ( CFG
     , PredMap
     , BasicBlock(..)
     , Terminator(..)
-    , OptimizedFun(..)
+    )
+import HMagma.IR.Lowering
+    ( buildFunctionCFG
     , buildPredMap
-    , buildFunctionCFG
     , getBlock
     , getPredecessors
     )
+import HMagma.Frontend.AST (BinaryOp(..))
+
+data OptimizedFun = OptimizedFun Ident [Ident] CFG
 
 type NodeId = Int
 type ParamList = [Ident]

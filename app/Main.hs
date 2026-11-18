@@ -7,11 +7,11 @@ import qualified Data.Text.IO as TIO
 import qualified Data.Text as T
 import Data.Bifunctor (first)
 import Text.Megaparsec (errorBundlePretty)
-import HMagma.Parser
-import HMagma.HIR
-import HMagma.TypeChecker
-import HMagma.CodeGen
-import HMagma.OptPasses
+import HMagma.Frontend.Parser
+import HMagma.Frontend.TypeChecker
+import HMagma.IR.HIR
+import HMagma.Backend.CudaGen
+import HMagma.Transforms.SCCP
 
 compiler :: String -> T.Text -> Either String T.Text
 compiler filename src = do

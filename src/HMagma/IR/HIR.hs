@@ -1,6 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-module HMagma.HIR
+module HMagma.IR.HIR
     ( genProgramHIR
     , Ident(..)
     , HIRProg(..)
@@ -12,7 +12,7 @@ module HMagma.HIR
 
 import Data.Text (Text)
 
-import HMagma.AST
+import HMagma.Frontend.AST
 
 newtype Ident = Ident Text deriving (Show, Eq, Ord)
 
